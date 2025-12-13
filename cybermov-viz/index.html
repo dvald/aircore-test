@@ -54,3 +54,119 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+
+        // Initialize Leaflet map
+        const map = L.map('map').setView([40.416775, -3.703790], 6);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let vehicleMarkers = {};
+        let lastUpdate = null;
+
+        // Parse URL parameters (AIR-Core format)
+        function parseAirCoreData() {
+            try {
+                const hash = window.location.hash.substring(1);
+                if (!hash) return null;
+                
+                // Decode base64 URL parameter
+                const decoded = atob(hash);
+                const params = JSON.parse(decoded);
+                
+                // AIR-Core passes a di_token that contains data
+                if (params.di_token) {
+                    const tokenParts = params.di_token.split('.');
+                    if (tokenParts.length > 1) {
+                        const payload = JSON.parse(atob(tokenParts[1]));
+                        return payload.data;
+                    }
+                }
+                
+                return null;
+            } catch (e) {
+                console.error('Error parsing data:', e);
+                return null;
+            }
+        }
+
+        // Fetch data from AIR-Core source
+        async function fetchData() {
+            try {
+                const hash = window.location.hash.substring(1);
+                if (!hash) return;
+                
+                const decoded = atob(hash);
+                const params = JSON.parse(decoded);
+                
+                if (params.source) {
+                    // Use the provided source URL
+                    const response = await fetch(`https://app.air-core.io/api/sources/${params.source}/data?limit=100`);
+                    const data = await response.json();
+                    updateVisualization(data);
+                }
+            } catch (e) {
+                console.error('Error fetching data:', e);
+            }
+        }
+
+        function updateVisualization(data) {
+            if (!data || !Array.isArray(data)) return;
+            
+            document.getElementById('cam-count').textContent = data.length;
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+            
+            // Group by station_id to count unique vehicles
+            const vehicles = new Set();
+            
+            data.forEach(msg => {
+                if (msg.station_id) {
+                    vehicles.add(msg.station_id);
+                    
+                    // Update or create marker
+                    const lat = msg.lat || msg.latitude;
+                    const lon = msg.lon || msg.longitude;
+                    
+                    if (lat && lon) {
+                        const speed = msg.speed || 0;
+                        const color = speed > 100 ? '#FF4433' : (speed > 80 ? '#FFCC07' : '#4CAF50');
+                        
+                        if (!vehicleMarkers[msg.station_id]) {
+                            // Create new marker
+                            const marker = L.circleMarker([lat, lon], {
+                                radius: 8,
+                                fillColor: color,
+                                color: '#fff',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            }).addTo(map);
+                            
+                            marker.bindPopup(`
+                                <b>Vehicle ${msg.station_id}</b><br>
+                                Speed: ${speed} km/h<br>
+                                Position: ${lat.toFixed(6)}, ${lon.toFixed(6)}
+                            `);
+                            
+                            vehicleMarkers[msg.station_id] = marker;
+                        } else {
+                            // Update existing marker
+                            vehicleMarkers[msg.station_id].setLatLng([lat, lon]);
+                            vehicleMarkers[msg.station_id].setStyle({ fillColor: color });
+                        }
+                    }
+                }
+            });
+            
+            document.getElementById('vehicle-count').textContent = vehicles.size;
+        }
+
+        // Auto-refresh every 5 seconds
+        setInterval(fetchData, 5000);
+        
+        // Initial load
+        fetchData();
+    </script>
+</body>
+</html>
