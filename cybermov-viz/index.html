@@ -100,9 +100,13 @@
                 const decoded = atob(hash);
                 const params = JSON.parse(decoded);
                 
-                if (params.source) {
-                    // Use the provided source URL
-                    const response = await fetch(`https://app.air-core.io/api/sources/${params.source}/data?limit=100`);
+                if (params.source && params.di_token) {
+                    // Use the provided source URL with Authorization header
+                    const response = await fetch(`https://app.air-core.io/api/sources/${params.source}/data?limit=100`, {
+                        headers: {
+                            'Authorization': `Bearer ${params.di_token}`
+                        }
+                    });
                     const data = await response.json();
                     updateVisualization(data);
                 }
