@@ -74,41 +74,41 @@
             const vehicles = new Set();
             
             data.forEach(msg => {
-                if (msg.station_id) {
-                    vehicles.add(msg.station_id);
+                const id = msg.station_id;
+                if (!id) return;
+                
+                vehicles.add(id);
+                
+                // Update or create marker - convert to numbers and validate
+                const lat = Number(msg.lat ?? msg.latitude);
+                const lon = Number(msg.lon ?? msg.longitude);
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+                
+                const speed = Number(msg.speed) || 0;
+                const color = speed > 100 ? '#F44336' : (speed > 80 ? '#FFC107' : '#4CAF50');
+                
+                if (!vehicleMarkers[id]) {
+                    // Create new marker
+                    const marker = L.circleMarker([lat, lon], {
+                        radius: 8,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map);
                     
-                    // Update or create marker
-                    const lat = msg.lat || msg.latitude;
-                    const lon = msg.lon || msg.longitude;
+                    marker.bindPopup(`
+                        <b>Vehicle ${id}</b><br>
+                        Speed: ${speed} km/h<br>
+                        Position: ${lat.toFixed(6)}, ${lon.toFixed(6)}
+                    `);
                     
-                    if (lat && lon) {
-                        const speed = msg.speed || 0;
-                        const color = speed > 100 ? '#FF4433' : (speed > 80 ? '#FFCC07' : '#4CAF50');
-                        
-                        if (!vehicleMarkers[msg.station_id]) {
-                            // Create new marker
-                            const marker = L.circleMarker([lat, lon], {
-                                radius: 8,
-                                fillColor: color,
-                                color: '#fff',
-                                weight: 2,
-                                opacity: 1,
-                                fillOpacity: 0.8
-                            }).addTo(map);
-                            
-                            marker.bindPopup(`
-                                <b>Vehicle ${msg.station_id}</b><br>
-                                Speed: ${speed} km/h<br>
-                                Position: ${lat.toFixed(6)}, ${lon.toFixed(6)}
-                            `);
-                            
-                            vehicleMarkers[msg.station_id] = marker;
-                        } else {
-                            // Update existing marker
-                            vehicleMarkers[msg.station_id].setLatLng([lat, lon]);
-                            vehicleMarkers[msg.station_id].setStyle({ fillColor: color });
-                        }
-                    }
+                    vehicleMarkers[id] = marker;
+                } else {
+                    // Update existing marker
+                    vehicleMarkers[id].setLatLng([lat, lon]);
+                    vehicleMarkers[id].setStyle({ fillColor: color });
                 }
             });
             
