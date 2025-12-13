@@ -70,12 +70,18 @@
     document.getElementById('cam-count').textContent = instances.length;
     document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
     
-    // Find field indexes
-    const stationIdIdx = features.findIndex(f => f.toLowerCase().includes('station'));
-    const latIdx = features.findIndex(f => f.toLowerCase().includes('lat'));
-    const lonIdx = features.findIndex(f => f.toLowerCase().includes('lon'));
-    const speedIdx = features.findIndex(f => f.toLowerCase().includes('speed'));
+    // Find field indexes - handle both strings and objects
+    const getFieldName = (f) => typeof f === 'string' ? f : (f?.name || f?.id || String(f));
     
+    const stationIdIdx = features.findIndex(f => {
+        const name = getFieldName(f).toLowerCase();
+        return name.includes('station') || name.includes('id');
+    });
+    const latIdx = features.findIndex(f => getFieldName(f).toLowerCase().includes('lat'));
+    const lonIdx = features.findIndex(f => getFieldName(f).toLowerCase().includes('lon'));
+    const speedIdx = features.findIndex(f => getFieldName(f).toLowerCase().includes('speed'));
+    
+    console.log('Features:', features);
     console.log('Indexes:', {stationIdIdx, latIdx, lonIdx, speedIdx});
     
     const vehicles = new Set();
