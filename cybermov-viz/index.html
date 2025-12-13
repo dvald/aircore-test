@@ -56,7 +56,7 @@
     <script src="https://app.air-core.io/static/js/custom-view.js"></script>
     <script>
         // Initialize Leaflet map
-        const map = L.map('map').setView([48.77, 2.07], 15);
+        const map = L.map('map').setView([48.77, 2.07], 12);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
@@ -64,56 +64,62 @@
 
         let vehicleMarkers = {};
 
-        function updateVisualization(data) {
-            if (!data || !Array.isArray(data)) return;
+        function updateVisualization(features, instances) {
+    if (!features || !instances || !Array.isArray(instances)) return;
+    
+    document.getElementById('cam-count').textContent = instances.length;
+    document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+    
+    // Find field indexes
+    const stationIdIdx = features.findIndex(f => f.toLowerCase().includes('station'));
+    const latIdx = features.findIndex(f => f.toLowerCase().includes('lat'));
+    const lonIdx = features.findIndex(f => f.toLowerCase().includes('lon'));
+    const speedIdx = features.findIndex(f => f.toLowerCase().includes('speed'));
+    
+    console.log('Indexes:', {stationIdIdx, latIdx, lonIdx, speedIdx});
+    
+    const vehicles = new Set();
+    
+    instances.forEach(instance => {
+        const stationId = instance[stationIdIdx];
+        if (!stationId) return;
+        
+        vehicles.add(stationId);
+        
+        // Convert to numbers and validate
+        const lat = Number(instance[latIdx]);
+        const lon = Number(instance[lonIdx]);
+        
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+        
+        const speed = Number(instance[speedIdx]) || 0;
+        const color = speed > 100 ? '#F44336' : (speed > 80 ? '#FFC107' : '#4CAF50');
+        
+        if (!vehicleMarkers[stationId]) {
+            const marker = L.circleMarker([lat, lon], {
+                radius: 8,
+                fillColor: color,
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(map);
             
-            document.getElementById('cam-count').textContent = data.length;
-            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+            marker.bindPopup(`
+                <b>Vehicle ${stationId}</b><br>
+                Speed: ${speed} km/h<br>
+                Position: ${lat.toFixed(6)}, ${lon.toFixed(6)}
+            `);
             
-            // Group by station_id to count unique vehicles
-            const vehicles = new Set();
-            
-            data.forEach(msg => {
-                const id = msg.station_id;
-                if (!id) return;
-                
-                vehicles.add(id);
-                
-                // Update or create marker - convert to numbers and validate
-                const lat = Number(msg.lat ?? msg.latitude);
-                const lon = Number(msg.lon ?? msg.longitude);
-                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-                
-                const speed = Number(msg.speed) || 0;
-                const color = speed > 100 ? '#F44336' : (speed > 80 ? '#FFC107' : '#4CAF50');
-                
-                if (!vehicleMarkers[id]) {
-                    // Create new marker
-                    const marker = L.circleMarker([lat, lon], {
-                        radius: 8,
-                        fillColor: color,
-                        color: '#fff',
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    }).addTo(map);
-                    
-                    marker.bindPopup(`
-                        <b>Vehicle ${id}</b><br>
-                        Speed: ${speed} km/h<br>
-                        Position: ${lat.toFixed(6)}, ${lon.toFixed(6)}
-                    `);
-                    
-                    vehicleMarkers[id] = marker;
-                } else {
-                    // Update existing marker
-                    vehicleMarkers[id].setLatLng([lat, lon]);
-                    vehicleMarkers[id].setStyle({ fillColor: color });
-                }
-            });
-            
-            document.getElementById('vehicle-count').textContent = vehicles.size;
+            vehicleMarkers[stationId] = marker;
+        } else {
+            vehicleMarkers[stationId].setLatLng([lat, lon]);
+            vehicleMarkers[stationId].setStyle({ fillColor: color });
         }
+    });
+    
+    document.getElementById('vehicle-count').textContent = vehicles.size;
+}
 
         // Wait for AIR-Core library to be ready
         DeepIntelligence.ready(function() {
@@ -146,7 +152,7 @@
                     return;
                 }
                 console.log('Data received from AIR-Core:', instances);
-                updateVisualization(instances);
+                updateVisualization(features, instances);
             });
             
             // Auto-refresh every 5 seconds
@@ -156,7 +162,7 @@
                         console.error('Error fetching data:', error);
                         return;
                     }
-                    updateVisualization(instances);
+                    updateVisualization(features, instances);
                 });
             }, 5000);
         });
