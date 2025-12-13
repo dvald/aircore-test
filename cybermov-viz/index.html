@@ -53,8 +53,8 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://app.air-core.io/static/js/custom-view.js"></script>
     <script>
-
         // Initialize Leaflet map
         const map = L.map('map').setView([40.416775, -3.703790], 6);
         
@@ -63,57 +63,6 @@
         }).addTo(map);
 
         let vehicleMarkers = {};
-        let lastUpdate = null;
-
-        // Parse URL parameters (AIR-Core format)
-        function parseAirCoreData() {
-            try {
-                const hash = window.location.hash.substring(1);
-                if (!hash) return null;
-                
-                // Decode base64 URL parameter
-                const decoded = atob(hash);
-                const params = JSON.parse(decoded);
-                
-                // AIR-Core passes a di_token that contains data
-                if (params.di_token) {
-                    const tokenParts = params.di_token.split('.');
-                    if (tokenParts.length > 1) {
-                        const payload = JSON.parse(atob(tokenParts[1]));
-                        return payload.data;
-                    }
-                }
-                
-                return null;
-            } catch (e) {
-                console.error('Error parsing data:', e);
-                return null;
-            }
-        }
-
-        // Fetch data from AIR-Core source
-        async function fetchData() {
-            try {
-                const hash = window.location.hash.substring(1);
-                if (!hash) return;
-                
-                const decoded = atob(hash);
-                const params = JSON.parse(decoded);
-                
-                if (params.source && params.di_token) {
-                    // Use the provided source URL with Authorization header
-                    const response = await fetch(`https://app.air-core.io/api/sources/${params.source}/data?limit=100`, {
-                        headers: {
-                            'Authorization': `Bearer ${params.di_token}`
-                        }
-                    });
-                    const data = await response.json();
-                    updateVisualization(data);
-                }
-            } catch (e) {
-                console.error('Error fetching data:', e);
-            }
-        }
 
         function updateVisualization(data) {
             if (!data || !Array.isArray(data)) return;
@@ -166,41 +115,31 @@
             document.getElementById('vehicle-count').textContent = vehicles.size;
         }
 
-        // Auto-refresh every 5 seconds
-        setInterval(fetchData, 5000);
-        
-        // Initial load
-
-        // Listen for postMessage from AIR-Core parent window
-        window.addEventListener('message', function(event) {
-            console.log('Received message:', event);
-            if (event.data && event.data.data) {
-                console.log('Data received from AIR-Core:', event.data.data);
-                updateVisualization(event.data.data);
-            }
-        });
-        
-        // Also try to parse URL hash for debugging
-        function parseHashParams() {
-            try {
-                const hash = window.location.hash.substring(1);
-                if (!hash) {
-                    console.log('No hash found in URL');
+        // Wait for AIR-Core library to be ready
+        DeepIntelligence.ready(function() {
+            console.log('AIR-Core DeepIntelligence library is ready');
+            
+            // Initial data fetch
+            DeepIntelligence.fetchData(function(error, features, instances, projection) {
+                if (error) {
+                    console.error('Error fetching data:', error);
                     return;
                 }
-                
-                console.log('Hash found:', hash);
-                const decoded = atob(hash);
-                console.log('Decoded hash:', decoded);
-                const params = JSON.parse(decoded);
-                console.log('Parsed params:', params);
-            } catch (e) {
-                console.error('Error parsing hash:', e);
-            }
-        }
-        
-        parseHashParams();
-        fetchData();
+                console.log('Data received from AIR-Core:', instances);
+                updateVisualization(instances);
+            });
+            
+            // Auto-refresh every 5 seconds
+            setInterval(function() {
+                DeepIntelligence.fetchData(function(error, features, instances, projection) {
+                    if (error) {
+                        console.error('Error fetching data:', error);
+                        return;
+                    }
+                    updateVisualization(instances);
+                });
+            }, 5000);
+        });
     </script>
 </body>
 </html>
