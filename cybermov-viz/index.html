@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cybermov V2X Visuali - v2</title>
+    <title>Cybermov V2X Visuali - v3</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -65,13 +65,25 @@
         let vehicleMarkers = {};
 
         function updateVisualization(features, instances) {
-    if (!features || !instances || !Array.isArray(instances)) return;
+    if (!features || !instances || !Array.isArray(instances)) {
+        console.error('Invalid data:', {features, instances});
+        return;
+    }
+    
+    if (!Array.isArray(features)) {
+        console.error('Features is not an array:', features);
+        return;
+    }
     
     document.getElementById('cam-count').textContent = instances.length;
     document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
     
     // Find field indexes - handle both strings and objects
-    const getFieldName = (f) => typeof f === 'string' ? f : (f?.name || f?.id || String(f));
+    const getFieldName = (f) => {
+        if (typeof f === 'string') return f;
+        if (typeof f === 'object' && f !== null) return f.name || f.id || String(f);
+        return String(f);
+    };
     
     const stationIdIdx = features.findIndex(f => {
         const name = getFieldName(f).toLowerCase();
@@ -157,7 +169,11 @@
                     console.error('Error fetching data:', error);
                     return;
                 }
-                console.log('Data received from AIR-Core:', instances);
+                console.log('=== AIR-Core Data Received ===');
+                console.log('Features type:', typeof features, Array.isArray(features));
+                console.log('Features:', JSON.stringify(features));
+                console.log('Instances count:', instances?.length);
+                console.log('First instance:', instances?.[0]);
                 updateVisualization(features, instances);
             });
             
