@@ -166,6 +166,36 @@
         setInterval(fetchData, 5000);
         
         // Initial load
+
+        // Listen for postMessage from AIR-Core parent window
+        window.addEventListener('message', function(event) {
+            console.log('Received message:', event);
+            if (event.data && event.data.data) {
+                console.log('Data received from AIR-Core:', event.data.data);
+                updateVisualization(event.data.data);
+            }
+        });
+        
+        // Also try to parse URL hash for debugging
+        function parseHashParams() {
+            try {
+                const hash = window.location.hash.substring(1);
+                if (!hash) {
+                    console.log('No hash found in URL');
+                    return;
+                }
+                
+                console.log('Hash found:', hash);
+                const decoded = atob(hash);
+                console.log('Decoded hash:', decoded);
+                const params = JSON.parse(decoded);
+                console.log('Parsed params:', params);
+            } catch (e) {
+                console.error('Error parsing hash:', e);
+            }
+        }
+        
+        parseHashParams();
         fetchData();
     </script>
 </body>
