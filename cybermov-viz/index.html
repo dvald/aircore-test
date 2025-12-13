@@ -55,32 +55,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://app.air-core.io/static/js/custom-view.js"></script>
     <script>
-        // Fix bug in custom-view.js: param() uses | instead of ||
-        (function() {
-            var getParameterByName = function(name, url) {
-                if (!url) url = window.location.href;
-                name = name.replace(/[\[\]]/g, '\\$&');
-                var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
-                    results = regex.exec(url);
-                if (!results) return null;
-                if (!results[2]) return '';
-                return decodeURIComponent(results[2].replace(/\+/g, ' '));
-            };
-            
-            var paramsInHash = {};
-            try {
-                paramsInHash = JSON.parse(atob((document.location.hash + "").substr(1)));
-                if (typeof paramsInHash !== "object" || paramsInHash === null) {
-                    paramsInHash = {};
-                }
-            } catch (ex) {}
-            
-            // Override param method with fixed version
-            DeepIntelligence.param = function(key) {
-                return paramsInHash[key] || getParameterByName(encodeURIComponent(key));
-            };
-        })();
-        
         // Initialize Leaflet map
         const map = L.map('map').setView([40.416775, -3.703790], 6);
         
@@ -144,6 +118,26 @@
         // Wait for AIR-Core library to be ready
         DeepIntelligence.ready(function() {
             console.log('AIR-Core DeepIntelligence library is ready');
+            
+            // Fix bug: custom-view.js uses | instead of || in param(), so token is not set correctly
+            // Parse hash manually and set token/source directly
+            try {
+                var hash = window.location.hash.substring(1);
+                if (hash) {
+                    var decoded = atob(hash);
+                    var params = JSON.parse(decoded);
+                    if (params.di_token) {
+                        DeepIntelligence.token = params.di_token;
+                        console.log('Token set manually:', DeepIntelligence.token.substring(0, 20) + '...');
+                    }
+                    if (params.source) {
+                        DeepIntelligence.source = params.source;
+                        console.log('Source set manually:', DeepIntelligence.source);
+                    }
+                }
+            } catch (ex) {
+                console.error('Error parsing hash:', ex);
+            }
             
             // Initial data fetch
             DeepIntelligence.fetchData(function(error, features, instances, projection) {
