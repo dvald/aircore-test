@@ -110,7 +110,8 @@
         
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
         
-        const speed = Number(instance[speedIdx]) || 0;
+        
+        updateVisualization(features, instances)const speed = Math.round((Number(instance[speedIdx]) || 0) * 0.036); // Convert cm/s to km/h
         const color = speed > 100 ? '#F44336' : (speed > 80 ? '#FFC107' : '#4CAF50');
         
         if (!vehicleMarkers[stationId]) {
