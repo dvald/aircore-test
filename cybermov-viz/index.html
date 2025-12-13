@@ -110,7 +110,23 @@
         
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
         
-        const speed = Math.round((Number(instance[speedIdx]) || 0) * 0.036); // Convert cm/s to km/h
+        const rawSpeed = Number(instance[speedIdx]) || 0;
+        console.log('Raw speed value:', rawSpeed, 'Station:', stationId);
+        
+        // Try different conversions based on typical ETSI values
+        // If raw value > 500, likely already in km/h or needs different conversion
+        let speed;
+        if (rawSpeed > 500) {
+            // Likely in 0.01 m/s units (ETSI) or already processed
+            speed = Math.round(rawSpeed * 0.01); // Convert 0.01 m/s to km/h
+        } else if (rawSpeed > 200) {
+            // Likely in m/s
+            speed = Math.round(rawSpeed * 3.6); // Convert m/s to km/h
+        } else {
+            // Likely already in km/h or very slow
+            speed = Math.round(rawSpeed);
+        }
+        
         const color = speed > 100 ? '#F44336' : (speed > 80 ? '#FFC107' : '#4CAF50');
         
         if (!vehicleMarkers[stationId]) {
