@@ -47,9 +47,9 @@
         <div class="stat"><span class="stat-label">Last Update:</span><span class="stat-value" id="last-update">--</span></div>
     </div>
     <div class="legend">
-        <div class="legend-item"><div class="legend-color" style="background: #4CAF50;"></div><span>Normal Speed (&lt;80 km/h)</span></div>
-        <div class="legend-item"><div class="legend-color" style="background: #FFC107;"></div><span>Medium Speed (80-100 km/h)</span></div>
-        <div class="legend-item"><div class="legend-color" style="background: #F44336;"></div><span>High Speed (&gt;100 km/h)</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #4CAF50;"></div><span>Normal Speed (&lt;30 km/h)</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #FFC107;"></div><span>Medium Speed (30-50 km/h)</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #F44336;"></div><span>High Speed (&gt;50 km/h)</span></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -127,7 +127,7 @@
             speed = Math.round(rawSpeed);
         }
         
-        const color = speed > 100 ? '#F44336' : (speed > 80 ? '#FFC107' : '#4CAF50');
+        const color = speed > 50 ? '#F44336' : (speed > 30 ? '#FFC107' : '#4CAF50');
         
         if (!vehicleMarkers[stationId]) {
             const marker = L.circleMarker([lat, lon], {
